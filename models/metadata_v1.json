@@ -1,0 +1,40 @@
+{
+    "version": "v1",
+    "algorithm": "Advanced Linear SVM",
+    "feature_configuration": {
+        "word_tfidf": "Unigram, Bigram, Trigram (ngram_range=(1,3), min_df=2, max_df=0.95)",
+        "char_tfidf": "Character 2-gram to 5-gram (analyzer='char_wb', ngram_range=(2,5), min_df=2, max_df=0.95)"
+    },
+    "evaluation_metrics": {
+        "Accuracy": 0.9919282511210762,
+        "Spam_Precision": 1.0,
+        "Spam_Recall": 0.9395973154362416,
+        "Spam_F1": 0.9688581314878892,
+        "Ham_Precision": 0.9907692307692307,
+        "Ham_Recall": 1.0,
+        "Macro_F1": 0.9821106731628009,
+        "Weighted_F1": 0.991821279932669,
+        "FPR": 0.0,
+        "FNR": 0.06040268456375839,
+        "TN": 966,
+        "FP": 0,
+        "FN": 9,
+        "TP": 140
+    },
+    "training_timestamp": "2026-09-30T13:37:05.360707",
+    "dataset_information": {
+        "source": "spam.csv",
+        "total_samples": 5572,
+        "class_distribution_overall": {
+            "0": 4825,
+            "1": 747
+        },
+        "train_size": 4457,
+        "test_size": 1115,
+        "class_distribution_val": {
+            "0": 966,
+            "1": 149
+        }
+    },
+    "model_selection_rationale": "Selected to maximize Spam F1 while keeping False Positive Rate (FPR) extremely low. High precision on Ham is essential so legitimate emails are not lost."
+}
