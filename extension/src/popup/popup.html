@@ -1,0 +1,36 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <meta charset="UTF-8">
+  <title>Email Sentinel AI</title>
+  <link rel="stylesheet" href="popup.css">
+</head>
+<body>
+  <div class="container">
+    <header>
+      <h1>EMAIL SENTINEL AI</h1>
+      <p class="subtitle">Analyze your Gmail with machine learning</p>
+    </header>
+
+    <div class="card">
+      <h2>Gmail Account</h2>
+      <p id="account-status">Not connected</p>
+
+      <div class="actions">
+        <button id="connect-btn" class="primary-btn">Connect Gmail</button>
+        <button id="analyze-btn" class="secondary-btn hidden">Analyze Gmail</button>
+        <button id="disconnect-btn" class="text-btn hidden">Disconnect</button>
+      </div>
+
+      <p id="error-message" class="error hidden"></p>
+    </div>
+
+    <footer>
+      <p>Spam Detection</p>
+      <p><strong>TF-IDF + LinearSVC</strong></p>
+    </footer>
+  </div>
+
+  <script type="module" src="popup.js"></script>
+</body>
+</html>

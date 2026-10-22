@@ -22,6 +22,7 @@ class EmailSyncService:
             "skipped_invalid": 0,
             "spam": 0,
             "ham": 0,
+            "promotions": 0,
             "model_version": self.classifier.metadata.get("version", "unknown")
         }
 
@@ -32,9 +33,11 @@ class EmailSyncService:
         emails = self.provider.fetch_emails(limit=limit)
         summary["fetched"] = len(emails)
 
+        account_email = self.provider.email
+
         for email in emails:
-            # Check if exists
-            if self.repo.check_email_exists(email.id):
+            # Check if exists for this account
+            if self.repo.check_email_exists(email.id, account_email=account_email):
                 summary["skipped_existing"] += 1
                 continue
 
@@ -55,7 +58,7 @@ class EmailSyncService:
             )
             classification = result["classification"]
             
-            # Store
+            # Store scoped to configured account
             self.repo.record_email_and_prediction(
                 subject=subject,
                 body=body,
@@ -64,11 +67,15 @@ class EmailSyncService:
                 decision_score=result["decision_score"],
                 model_version=result["model_version"],
                 provider=email.provider,
-                provider_message_id=email.id
+                provider_message_id=email.id,
+                provider_category=email.provider_category,
+                account_email=account_email
             )
 
             summary["processed"] += 1
-            if classification == "SPAM":
+            if email.provider_category == "PROMOTIONS":
+                summary["promotions"] += 1
+            elif classification == "SPAM":
                 summary["spam"] += 1
             else:
                 summary["ham"] += 1

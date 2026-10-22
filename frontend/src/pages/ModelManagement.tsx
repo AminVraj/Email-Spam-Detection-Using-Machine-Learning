@@ -39,7 +39,7 @@ export function ModelManagement() {
       <div className="flex justify-between items-end mb-6">
         <div>
           <h1 className="text-2xl font-bold">Model Management</h1>
-          <p className="text-slate-500 text-sm mt-1">Admin actions for model lifecycle and governance</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm mt-1">Admin actions for model lifecycle and governance</p>
         </div>
         
         <button
@@ -59,20 +59,20 @@ export function ModelManagement() {
       )}
       
       {trainMutation.isError && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg text-sm border border-red-200">
+        <div className="bg-red-50 dark:bg-red-900/30 text-red-600 p-4 rounded-lg text-sm border border-red-200">
           Training failed: {trainMutation.error.message}
         </div>
       )}
 
       {trainMutation.isSuccess && (
-        <div className="bg-green-50 text-green-700 p-4 rounded-lg text-sm border border-green-200">
+        <div className="bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 p-4 rounded-lg text-sm border border-green-200">
           Successfully trained candidate model version: {trainMutation.data.version}
         </div>
       )}
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 overflow-hidden">
         <table className="w-full text-left text-sm">
-          <thead className="bg-slate-50 border-b border-slate-200 text-slate-500">
+          <thead className="bg-slate-50 dark:bg-slate-900 border-b border-slate-200 dark:border-slate-700 text-slate-500 dark:text-slate-400">
             <tr>
               <th className="px-6 py-4 font-medium">Version</th>
               <th className="px-6 py-4 font-medium">Algorithm</th>
@@ -85,35 +85,35 @@ export function ModelManagement() {
           </thead>
           <tbody className="divide-y divide-slate-100">
             {models.map(model => (
-              <tr key={model.version} className="hover:bg-slate-50 transition-colors">
+              <tr key={model.version} className="hover:bg-slate-50 dark:bg-slate-900 transition-colors">
                 <td className="px-6 py-4 font-medium">
                   {model.version}
                   {model.status === "production" && (
-                    <span className="block text-xs font-normal text-indigo-600 mt-0.5">Currently serving predictions</span>
+                    <span className="block text-xs font-normal text-indigo-600 dark:text-indigo-400 mt-0.5">Currently serving predictions</span>
                   )}
                 </td>
                 <td className="px-6 py-4">{model.algorithm}</td>
                 <td className="px-6 py-4">
                   <span className={clsx(
                     "px-2.5 py-1 rounded-full text-xs font-medium border",
-                    model.status === "production" ? "bg-indigo-50 text-indigo-700 border-indigo-200" :
+                    model.status === "production" ? "bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 border-indigo-200" :
                     model.status === "candidate" ? "bg-amber-50 text-amber-700 border-amber-200" :
-                    "bg-slate-100 text-slate-600 border-slate-200"
+                    "bg-slate-100 text-slate-600 dark:text-slate-300 border-slate-200 dark:border-slate-700"
                   )}>
                     {model.status.toUpperCase()}
                   </span>
                 </td>
-                <td className="px-6 py-4 text-slate-500">
+                <td className="px-6 py-4 text-slate-500 dark:text-slate-400">
                   {new Date(model.training_timestamp).toLocaleString()}
                 </td>
                 <td className="px-6 py-4">{model.feedback_count_used}</td>
-                <td className="px-6 py-4 font-mono bg-slate-50">
+                <td className="px-6 py-4 font-mono bg-slate-50 dark:bg-slate-900">
                   {model.metrics?.Spam_F1 ? model.metrics.Spam_F1.toFixed(4) : "-"}
                 </td>
                 <td className="px-6 py-4 text-right">
                   <button
                     onClick={() => setSelectedVersion(selectedVersion === model.version ? null : model.version)}
-                    className="text-indigo-600 hover:text-indigo-800 font-medium px-3 py-1.5 rounded-lg hover:bg-indigo-50 transition-colors"
+                    className="text-indigo-600 dark:text-indigo-400 hover:text-indigo-800 font-medium px-3 py-1.5 rounded-lg hover:bg-indigo-50 dark:bg-indigo-900/30 transition-colors"
                   >
                     {selectedVersion === model.version ? "Close" : "Manage"}
                   </button>
@@ -122,7 +122,7 @@ export function ModelManagement() {
             ))}
             {models.length === 0 && !isLoading && (
               <tr>
-                <td colSpan={7} className="px-6 py-8 text-center text-slate-500">
+                <td colSpan={7} className="px-6 py-8 text-center text-slate-500 dark:text-slate-400">
                   No models found in the database.
                 </td>
               </tr>
@@ -171,7 +171,7 @@ function ModelActionsPanel({ version, status, prodVersion }: { version: string, 
 
   if (status === "production") {
     return (
-      <div className="bg-indigo-50 border border-indigo-200 rounded-xl p-6 text-indigo-900">
+      <div className="bg-indigo-50 dark:bg-indigo-900/30 border border-indigo-200 rounded-xl p-6 text-indigo-900">
         <div className="flex items-center gap-2 font-bold mb-2">
           <Shield size={20} /> Production Model ({version})
         </div>
@@ -182,11 +182,11 @@ function ModelActionsPanel({ version, status, prodVersion }: { version: string, 
 
   if (status === "archived") {
     return (
-      <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+      <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm">
         <div className="flex justify-between items-center">
           <div>
             <h3 className="font-bold mb-1">Archived Model ({version})</h3>
-            <p className="text-sm text-slate-500">This model was previously in production.</p>
+            <p className="text-sm text-slate-500 dark:text-slate-400">This model was previously in production.</p>
           </div>
           <button
             onClick={() => {
@@ -201,7 +201,7 @@ function ModelActionsPanel({ version, status, prodVersion }: { version: string, 
             {rollbackMutation.isPending ? "Rolling back..." : "Rollback to this version"}
           </button>
         </div>
-        <p className="text-xs text-slate-500 mt-4">
+        <p className="text-xs text-slate-500 dark:text-slate-400 mt-4">
           Rollback changes the production model used for future predictions. It does not retrain the model.
         </p>
         
@@ -213,17 +213,17 @@ function ModelActionsPanel({ version, status, prodVersion }: { version: string, 
   }
 
   return (
-    <div className="bg-white border border-slate-200 rounded-xl p-6 shadow-sm">
+    <div className="bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-6 shadow-sm">
       <div className="flex justify-between items-center mb-6">
         <div>
           <h3 className="font-bold text-lg">Candidate Model ({version})</h3>
-          <p className="text-sm text-slate-500">Compare with production ({prodVersion}) and promote if approved.</p>
+          <p className="text-sm text-slate-500 dark:text-slate-400">Compare with production ({prodVersion}) and promote if approved.</p>
         </div>
         
         {!comparing && (
           <button
             onClick={() => setComparing(true)}
-            className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-800 border border-slate-300 px-4 py-2 rounded-lg font-medium transition-colors"
+            className="flex items-center gap-2 bg-slate-100 hover:bg-slate-200 text-slate-800 dark:text-slate-100 border border-slate-300 px-4 py-2 rounded-lg font-medium transition-colors"
           >
             <GitMerge size={18} />
             Run Governance Evaluation
@@ -235,41 +235,41 @@ function ModelActionsPanel({ version, status, prodVersion }: { version: string, 
       {comparing && compError && <div className="py-4 text-center text-red-500">Failed to compare model.</div>}
       
       {comparing && comp && (
-        <div className="space-y-6 border-t border-slate-100 pt-6">
+        <div className="space-y-6 border-t border-slate-100 dark:border-slate-800 pt-6">
           <div className="flex items-center gap-3">
             <span className={clsx(
               "px-3 py-1 rounded font-bold text-sm",
-              comp.comparison.decision === "APPROVED" ? "bg-green-100 text-green-700" : "bg-red-100 text-red-700"
+              comp.comparison.decision === "APPROVED" ? "bg-green-100 text-green-700 dark:text-green-400" : "bg-red-100 text-red-700 dark:text-red-400"
             )}>
               Governance evaluation result: {comp.comparison.decision}
             </span>
-            <span className="text-sm text-slate-500">
+            <span className="text-sm text-slate-500 dark:text-slate-400">
               Evaluated against holdout dataset.
             </span>
           </div>
 
-          <div className="bg-slate-50 rounded-lg p-4 border border-slate-200">
-            <h4 className="font-medium mb-3 text-sm border-b border-slate-200 pb-2">Governance Rules Evaluated</h4>
+          <div className="bg-slate-50 dark:bg-slate-900 rounded-lg p-4 border border-slate-200 dark:border-slate-700">
+            <h4 className="font-medium mb-3 text-sm border-b border-slate-200 dark:border-slate-700 pb-2">Governance Rules Evaluated</h4>
             <ul className="space-y-2 text-sm">
               <li className="flex justify-between">
-                <span className="text-slate-600">Spam Precision Degradation &lt; 0.02:</span>
+                <span className="text-slate-600 dark:text-slate-300">Spam Precision Degradation &lt; 0.02:</span>
                 <span className="font-mono">{comp.comparison.degradation.Spam_Precision.toFixed(4)}</span>
               </li>
               <li className="flex justify-between">
-                <span className="text-slate-600">Spam Recall Degradation &lt; 0.05:</span>
+                <span className="text-slate-600 dark:text-slate-300">Spam Recall Degradation &lt; 0.05:</span>
                 <span className="font-mono">{comp.comparison.degradation.Spam_Recall.toFixed(4)}</span>
               </li>
               <li className="flex justify-between">
-                <span className="text-slate-600">False Positive Rate (FPR) &lt; 0.02:</span>
+                <span className="text-slate-600 dark:text-slate-300">False Positive Rate (FPR) &lt; 0.02:</span>
                 <span className="font-mono">{comp.comparison.fpr.toFixed(4)}</span>
               </li>
             </ul>
           </div>
 
           {comp.comparison.reasons && comp.comparison.reasons.length > 0 && (
-            <div className="bg-red-50 border border-red-200 rounded-lg p-4">
+            <div className="bg-red-50 dark:bg-red-900/30 border border-red-200 rounded-lg p-4">
               <h4 className="font-medium text-red-800 mb-2 text-sm">Rejection Reasons:</h4>
-              <ul className="list-disc pl-5 text-sm text-red-700 space-y-1">
+              <ul className="list-disc pl-5 text-sm text-red-700 dark:text-red-400 space-y-1">
                 {comp.comparison.reasons.map((r, i) => <li key={i}>{r}</li>)}
               </ul>
             </div>

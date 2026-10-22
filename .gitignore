@@ -12,6 +12,7 @@ __pycache__/
 
 # Databases
 *.db
+*.db.bak
 *.sqlite
 *.sqlite3
 
@@ -28,3 +29,7 @@ frontend/dist/
 # IDE
 .vscode/
 .idea/
+
+# Extension
+extension/dist/
+extension/node_modules/

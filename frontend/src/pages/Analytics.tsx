@@ -10,9 +10,10 @@ export function Analytics() {
   if (isLoading) return <div className="p-8 text-center">Loading analytics...</div>;
   if (error || !stats) return <div className="p-8 text-center text-red-500">Failed to load analytics.</div>;
 
-  const totalPredicted = stats.total_predictions || 1; // avoid div by 0
-  const spamPct = Math.round((stats.spam_predictions / totalPredicted) * 100);
-  const hamPct = Math.round((stats.ham_predictions / totalPredicted) * 100);
+  const totalProcessed = (stats.total_predictions || 0) || 1; // avoid div by 0
+  const spamPct = Math.round((stats.spam_predictions / totalProcessed) * 100);
+  const hamPct = Math.round((stats.ham_predictions / totalProcessed) * 100);
+  const promoPct = Math.round(((stats.promotions_count || 0) / totalProcessed) * 100);
 
   const observed = stats.user_feedback_observed_outcomes;
   const totalFeedback = stats.total_feedback || 1;
@@ -24,15 +25,15 @@ export function Analytics() {
       <h1 className="text-2xl font-bold mb-6">Analytics & Metrics</h1>
       
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-          <h2 className="text-lg font-semibold mb-4 text-slate-800 border-b border-slate-100 pb-2">
-            Spam vs Ham Distribution
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+          <h2 className="text-lg font-semibold mb-4 text-slate-800 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-2">
+            Spam vs Ham vs Promotions Distribution
           </h2>
           <div className="space-y-4 mt-4">
             <div>
               <div className="flex justify-between text-sm mb-1">
                 <span className="font-medium">SPAM ({stats.spam_predictions})</span>
-                <span className="text-slate-500">{spamPct}%</span>
+                <span className="text-slate-500 dark:text-slate-400">{spamPct}%</span>
               </div>
               <div className="w-full bg-slate-100 rounded-full h-2">
                 <div className="bg-red-500 h-2 rounded-full" style={{ width: `${spamPct}%` }}></div>
@@ -41,40 +42,49 @@ export function Analytics() {
             <div>
               <div className="flex justify-between text-sm mb-1">
                 <span className="font-medium">HAM ({stats.ham_predictions})</span>
-                <span className="text-slate-500">{hamPct}%</span>
+                <span className="text-slate-500 dark:text-slate-400">{hamPct}%</span>
               </div>
               <div className="w-full bg-slate-100 rounded-full h-2">
                 <div className="bg-green-500 h-2 rounded-full" style={{ width: `${hamPct}%` }}></div>
               </div>
             </div>
+            <div>
+              <div className="flex justify-between text-sm mb-1">
+                <span className="font-medium">PROMOTIONS ({stats.promotions_count || 0})</span>
+                <span className="text-slate-500 dark:text-slate-400">{promoPct}%</span>
+              </div>
+              <div className="w-full bg-slate-100 rounded-full h-2">
+                <div className="bg-orange-500 h-2 rounded-full" style={{ width: `${promoPct}%` }}></div>
+              </div>
+            </div>
             <p className="text-xs text-slate-400 mt-4 pt-4 border-t border-slate-50">
-              Distribution of {stats.total_predictions} processed emails.
+              Distribution of {totalProcessed} processed emails.
             </p>
           </div>
         </div>
 
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
-          <h2 className="text-lg font-semibold mb-4 text-slate-800 border-b border-slate-100 pb-2 flex justify-between">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
+          <h2 className="text-lg font-semibold mb-4 text-slate-800 dark:text-slate-100 border-b border-slate-100 dark:border-slate-800 pb-2 flex justify-between">
             <span>User Observed Feedback Outcomes</span>
-            <span className="text-sm font-normal text-slate-500 bg-slate-100 px-2 py-0.5 rounded">Not Model Holdout Metrics</span>
+            <span className="text-sm font-normal text-slate-500 dark:text-slate-400 bg-slate-100 px-2 py-0.5 rounded">Not Model Holdout Metrics</span>
           </h2>
           <div className="grid grid-cols-2 gap-4">
-            <div className="bg-slate-50 p-4 rounded-lg">
-              <p className="text-xs text-slate-500 font-medium">True Positives (Confirmed Spam)</p>
+            <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg">
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">True Positives (Confirmed Spam)</p>
               <p className="text-xl font-bold mt-1">{observed.true_positives}</p>
             </div>
-            <div className="bg-slate-50 p-4 rounded-lg">
-              <p className="text-xs text-slate-500 font-medium">True Negatives (Confirmed Ham)</p>
+            <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-lg">
+              <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">True Negatives (Confirmed Ham)</p>
               <p className="text-xl font-bold mt-1">{observed.true_negatives}</p>
             </div>
-            <div className="bg-red-50 border border-red-100 p-4 rounded-lg">
+            <div className="bg-red-50 dark:bg-red-900/30 border border-red-100 p-4 rounded-lg">
               <p className="text-xs text-red-600 font-medium">False Positives (Ham marked Spam)</p>
-              <p className="text-xl font-bold mt-1 text-red-700">{observed.false_positives}</p>
+              <p className="text-xl font-bold mt-1 text-red-700 dark:text-red-400">{observed.false_positives}</p>
               <p className="text-xs text-red-500 mt-1">{fpPct}% of feedback</p>
             </div>
-            <div className="bg-orange-50 border border-orange-100 p-4 rounded-lg">
+            <div className="bg-orange-50 dark:bg-orange-900/30 border border-orange-100 p-4 rounded-lg">
               <p className="text-xs text-orange-600 font-medium">False Negatives (Spam marked Ham)</p>
-              <p className="text-xl font-bold mt-1 text-orange-700">{observed.false_negatives}</p>
+              <p className="text-xl font-bold mt-1 text-orange-700 dark:text-orange-400">{observed.false_negatives}</p>
               <p className="text-xs text-orange-500 mt-1">{fnPct}% of feedback</p>
             </div>
           </div>

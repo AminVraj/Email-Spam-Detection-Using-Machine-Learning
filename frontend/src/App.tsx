@@ -17,9 +17,12 @@ const queryClient = new QueryClient({
   },
 });
 
+import { ThemeProvider } from "./context/ThemeContext";
+
 function App() {
   return (
-    <QueryClientProvider client={queryClient}>
+    <ThemeProvider>
+      <QueryClientProvider client={queryClient}>
       <BrowserRouter>
         <Routes>
           <Route path="/" element={<AppLayout />}>
@@ -33,6 +36,7 @@ function App() {
         </Routes>
       </BrowserRouter>
     </QueryClientProvider>
+    </ThemeProvider>
   );
 }
 

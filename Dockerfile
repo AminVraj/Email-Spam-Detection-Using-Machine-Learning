@@ -1,25 +1,34 @@
-# Use the official Python image
-FROM python:3.9
+# Python 3.11 slim base image
+FROM python:3.11-slim
 
-# Set the working directory in the container
+# Set working directory
 WORKDIR /app
 
-# Copy the requirements file into the container at /app
-COPY requirements.txt /app/
+# Install system dependencies (including Tesseract OCR engine)
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    tesseract-ocr \
+    libtesseract-dev \
+    && rm -rf /var/lib/apt/lists/*
 
-# Install any needed packages specified in requirements.txt
+# Install Python dependencies
+COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Copy the content of the Code, Model, and app.py into the container at /app
-COPY Code/ /app/Code/
-COPY Model/ /app/Model/
-COPY app.py /app/
+# Copy backend application, training modules, and ML models
+COPY backend/ /app/backend/
+COPY training/ /app/training/
+COPY models/ /app/models/
 
-# Expose the port that Flask will run on
-EXPOSE 5000
+# Expose FastAPI port
+EXPOSE 8000
 
-# Define environment variable
-ENV FLASK_APP=app.py
+# Set environment defaults
+ENV HOST=0.0.0.0
+ENV PORT=8000
+ENV DATABASE_URL=sqlite:////app/data/spam_detection.db
 
-# Command to run on container start
-CMD ["flask", "run", "--host=0.0.0.0"]
+# Ensure persistent database volume mount point
+VOLUME ["/app/data"]
+
+# Run FastAPI backend via Uvicorn
+CMD ["uvicorn", "backend.app.main:app", "--host", "0.0.0.0", "--port", "8000"]

@@ -44,11 +44,11 @@ def test_provider_abstraction():
         def authenticate(self): return True
         def fetch_emails(self, limit=20): return []
         def get_email(self, msg_id): return None
-        
+
     p = DummyProvider()
     assert p.authenticate() is True
     assert p.fetch_emails() == []
-    
+
 @patch("backend.email.gmail.IMAPClient")
 def test_gmail_provider_auth(mock_imap):
     with patch.dict(os.environ, {"GMAIL_EMAIL": "test@gmail.com", "GMAIL_APP_PASSWORD": "pass"}):
@@ -84,7 +84,7 @@ def test_gmail_parsing_plain_text():
     assert "Plain text body" in parsed.body
     assert parsed.sender == "sender@test.com"
     assert parsed.id == "<test-123>"
-    
+
 def test_gmail_parsing_html_fallback():
     provider = GmailProvider()
     raw = create_mock_raw_email(content_type="text/html", body="<html><body>HTML body</body></html>")
@@ -109,7 +109,7 @@ def test_gmail_parsing_attachments():
     msg["Message-ID"] = "<att-123>"
     msg.set_content("Body")
     msg.add_attachment(b"dummy data", maintype="application", subtype="pdf", filename="test.pdf")
-    
+
     parsed = provider._parse_message(1, msg.as_bytes())
     assert len(parsed.attachments) == 1
     assert parsed.attachments[0].filename == "test.pdf"
@@ -136,22 +136,51 @@ def test_email_sync_service(mock_fetch, mock_auth, db_session):
             subject="", body="", headers={}
         )
     ]
-    
+
     service = EmailSyncService(db_session)
     summary = service.sync_recent(limit=4)
-    
+
     assert summary["fetched"] == 4
     assert summary["skipped_existing"] == 1 # msg2 duplicate
     assert summary["skipped_invalid"] == 1 # empty msg4
     assert summary["processed"] == 2 # msg1 and msg2(first)
     assert summary["spam"] == 1 # msg1
     assert summary["ham"] == 1 # msg2
-    
+
+@patch("backend.email.gmail.GmailProvider.authenticate", return_value=True)
+@patch("backend.email.gmail.GmailProvider.fetch_emails")
+def test_email_sync_service_promotions(mock_fetch, mock_auth, db_session):
+    mock_fetch.return_value = [
+        EmailMessage(
+            id="promo1", provider="gmail", provider_category="PROMOTIONS", sender="marketing@promo.com", recipients=[],
+            subject="50% OFF", body="Buy now!", headers={}
+        ),
+        EmailMessage(
+            id="promo2_spam", provider="gmail", provider_category="PROMOTIONS", sender="spammer@spam.com", recipients=[],
+            subject="WINNER!!", body="You won a prize! Call now.", headers={}
+        ),
+        EmailMessage(
+            id="primary1", provider="gmail", provider_category="PRIMARY", sender="friend@test.com", recipients=[],
+            subject="Lunch", body="Are we still meeting?", headers={}
+        )
+    ]
+
+    service = EmailSyncService(db_session)
+    summary = service.sync_recent(limit=3)
+
+    # promo1 is promotions+ham -> PROMOTION.
+    # promo2_spam is promotions+spam -> PROMOTIONS (or SPAM depending on how mapped, but count as fetched)
+    # primary1 is primary+ham -> HAM
+    assert summary["fetched"] == 3
+    assert summary["promotions"] >= 1
+
+
 def test_auth_status_endpoint():
     from fastapi.testclient import TestClient
     from backend.app.main import app
     client = TestClient(app)
-    
+    client.headers["Authorization"] = "Bearer mock_token_admin"
+
     with patch("backend.email.gmail.GmailProvider.authenticate", return_value=True):
         response = client.get("/gmail/auth/status")
         assert response.status_code == 200
@@ -161,7 +190,8 @@ def test_sync_endpoint():
     from fastapi.testclient import TestClient
     from backend.app.main import app
     client = TestClient(app)
-    
+    client.headers["Authorization"] = "Bearer mock_token_admin"
+
     with patch("backend.email.service.EmailSyncService.sync_recent", return_value={"fetched": 1, "processed": 1}):
         response = client.post("/gmail/sync")
         assert response.status_code == 200
@@ -218,7 +248,7 @@ def test_gmail_parsing_multipart_prefer_plain_text():
     msg["Message-ID"] = "<multi-123>"
     msg.set_content("Plain text version &amp; content")
     msg.add_alternative("<p>HTML version &amp; content</p>", subtype="html")
-    
+
     provider = GmailProvider()
     parsed = provider._parse_message(1, msg.as_bytes())
     assert "Plain text version & content" in parsed.body

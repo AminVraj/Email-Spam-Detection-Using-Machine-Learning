@@ -5,6 +5,8 @@ export interface Email {
   body?: string;
   received_at: string;
   classification: string;
+  provider_category: string;
+  ml_prediction: string;
   decision_score: number;
   model_version: string;
   feedback?: {
@@ -24,6 +26,7 @@ export interface Statistics {
   total_predictions: number;
   spam_predictions: number;
   ham_predictions: number;
+  promotions_count?: number;
   total_feedback: number;
   user_corrections: number;
   predicted_spam_confirmed_by_user: number;

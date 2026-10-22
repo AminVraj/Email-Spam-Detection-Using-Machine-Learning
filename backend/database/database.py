@@ -16,6 +16,19 @@ def init_db():
     # Safe schema migration for SQLite table extensions
     try:
         inspector = inspect(engine)
+        if "emails" in inspector.get_table_names():
+            columns = [c["name"] for c in inspector.get_columns("emails")]
+            with engine.connect() as conn:
+                if "account_email" not in columns:
+                    conn.execute(text("ALTER TABLE emails ADD COLUMN account_email VARCHAR"))
+                # Create partial unique index to guarantee uniqueness of message ID per provider and account
+                conn.execute(text(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS uq_email_provider_msg_account "
+                    "ON emails (provider, provider_message_id, account_email) "
+                    "WHERE provider_message_id IS NOT NULL;"
+                ))
+                conn.commit()
+
         if "model_versions" in inspector.get_table_names():
             columns = [c["name"] for c in inspector.get_columns("model_versions")]
             with engine.connect() as conn:

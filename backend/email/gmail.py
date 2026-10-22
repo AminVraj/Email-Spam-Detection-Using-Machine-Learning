@@ -25,23 +25,23 @@ class GmailProvider(EmailProvider):
         except Exception:
             return False
 
-    def _parse_message(self, uid, raw_msg) -> EmailMessage:
+    def _parse_message(self, uid, raw_msg, category="PRIMARY") -> EmailMessage:
         msg = pyzmail.PyzMessage.factory(raw_msg)
-        
+
         # Sender
         sender = ""
         addresses = msg.get_addresses("from")
         if addresses:
             sender = addresses[0][1]
-            
+
         # Recipients
         recipients = []
         for to in msg.get_addresses("to"):
             recipients.append(to[1])
-            
+
         # Subject
         subject = msg.get_subject() or ""
-            
+
         # Body
         body = ""
         if msg.text_part:
@@ -70,10 +70,10 @@ class GmailProvider(EmailProvider):
             val = msg.get_decoded_header(header)
             if val:
                 headers[header] = val
-                
+
         # Message ID (fallback to IMAP UID)
         message_id = headers.get("Message-ID", str(uid))
-        
+
         # Received at
         received_at = None
         date_header = headers.get("Date")
@@ -84,7 +84,7 @@ class GmailProvider(EmailProvider):
                     received_at = received_at.replace(tzinfo=None) # naive UTC
             except Exception:
                 pass
-                
+
         # Attachments metadata
         attachments = []
         for part in msg.mailparts:
@@ -93,10 +93,11 @@ class GmailProvider(EmailProvider):
                 mime_type = part.type
                 size = len(part.get_payload()) if part.get_payload() else 0
                 attachments.append(AttachmentMetadata(filename=filename, mime_type=mime_type, size=size))
-                
+
         return EmailMessage(
             id=message_id,
             provider="gmail",
+            provider_category=category,
             sender=sender,
             recipients=recipients,
             subject=subject,
@@ -110,35 +111,46 @@ class GmailProvider(EmailProvider):
         if not self.server:
             if not self.authenticate():
                 return []
-                
+
         try:
             self.server.select_folder("INBOX")
-            # Using is:unread category:primary as the base logic
-            messages = self.server.gmail_search("is:unread category:primary")
-            
-            if not messages:
+
+            # Fetch Primary and Promotions
+            primary_uids = self.server.gmail_search("is:unread category:primary")
+            promo_uids = self.server.gmail_search("is:unread category:promotions")
+
+            # Map UIDs to categories
+            uid_categories = {}
+            for uid in primary_uids:
+                uid_categories[uid] = "PRIMARY"
+            for uid in promo_uids:
+                uid_categories[uid] = "PROMOTIONS"
+
+            all_uids = list(uid_categories.keys())
+
+            if not all_uids:
                 return []
-                
-            messages = messages[:limit]
-            
-            raw_data = self.server.fetch(messages, ["BODY.PEEK[]"])
-            
+
+            all_uids = all_uids[:limit]
+
+            raw_data = self.server.fetch(all_uids, ["BODY.PEEK[]"])
+
             parsed_emails = []
             for uid, data in raw_data.items():
                 raw_msg = data.get(b"BODY[]") or data.get(b"BODY.PEEK[]")
                 if not raw_msg:
                     continue
-                    
-                parsed_email = self._parse_message(uid, raw_msg)
-                
-                # Mark as seen as per old listener logic if it was operationally useful
-                # But ML system relies on deduplication in DB
+
+                category = uid_categories.get(uid, "PRIMARY")
+                parsed_email = self._parse_message(uid, raw_msg, category=category)
+
+                # Mark as seen
                 self.server.add_flags(uid, ["\\Seen"])
-                
+
                 parsed_emails.append(parsed_email)
-                
+
             return parsed_emails
-            
+
         except Exception as e:
             return []
 

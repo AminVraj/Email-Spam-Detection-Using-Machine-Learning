@@ -17,5 +17,6 @@ class EmailMessage:
     subject: str
     body: str
     received_at: Optional[datetime] = None
+    provider_category: str = "PRIMARY"
     headers: Dict[str, str] = field(default_factory=dict)
     attachments: List[AttachmentMetadata] = field(default_factory=list)

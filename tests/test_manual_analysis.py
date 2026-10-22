@@ -13,6 +13,7 @@ from PIL import Image
 os.environ["DATABASE_URL"] = "sqlite:///./test_api.db"
 
 client = TestClient(app)
+client.headers["Authorization"] = "Bearer mock_token_testuser"
 
 def get_db_counts():
     db = SessionLocal()
@@ -26,7 +27,7 @@ def get_db_counts():
 
 def test_analyze_manual_ham():
     emails_before, preds_before, fb_before = get_db_counts()
-    
+
     payload = {
         "subject": "Lunch tomorrow?",
         "body": "Hey, are we still meeting for lunch tomorrow at 12?",
@@ -39,7 +40,7 @@ def test_analyze_manual_ham():
     assert "decision_score" in data
     assert "model_version" in data
     assert data.get("email_id") is None
-    
+
     emails_after, preds_after, fb_after = get_db_counts()
     assert emails_after == emails_before
     assert preds_after == preds_before
@@ -47,7 +48,7 @@ def test_analyze_manual_ham():
 
 def test_analyze_manual_spam():
     emails_before, preds_before, fb_before = get_db_counts()
-    
+
     payload = {
         "subject": "You Won!",
         "body": "WINNER!! As a valued network customer you have been selected to receive a £900 prize reward! To claim call 09061701461.",
@@ -60,7 +61,7 @@ def test_analyze_manual_spam():
     assert "decision_score" in data
     assert "model_version" in data
     assert data.get("email_id") is None
-    
+
     emails_after, preds_after, fb_after = get_db_counts()
     assert emails_after == emails_before
     assert preds_after == preds_before
@@ -68,7 +69,7 @@ def test_analyze_manual_spam():
 
 def test_predict_remains_unchanged():
     emails_before, preds_before, fb_before = get_db_counts()
-    
+
     payload = {
         "subject": "Meeting",
         "body": "Let's meet tomorrow.",
@@ -78,7 +79,7 @@ def test_predict_remains_unchanged():
     assert response.status_code == 200
     data = response.json()
     assert data.get("email_id") is not None
-    
+
     emails_after, preds_after, fb_after = get_db_counts()
     assert emails_after == emails_before + 1
     assert preds_after == preds_before + 1
@@ -87,7 +88,7 @@ def test_predict_remains_unchanged():
 def test_regression_bug_paste_and_ocr():
     # 1. Count current email records
     emails_before, preds_before, fb_before = get_db_counts()
-    
+
     # 2. Submit pasted manual email
     payload = {
         "subject": "Paste Test",
@@ -96,13 +97,13 @@ def test_regression_bug_paste_and_ocr():
     }
     response = client.post("/analyze-manual", json=payload)
     assert response.status_code == 200
-    
+
     # 3. Count email records again
     emails_after_paste, _, _ = get_db_counts()
-    
+
     # 4. Assert count is unchanged
     assert emails_after_paste == emails_before
-    
+
     # Then:
     # 1. Upload screenshot & 2. Run OCR
     # create a dummy image
@@ -110,22 +111,22 @@ def test_regression_bug_paste_and_ocr():
     img_byte_arr = io.BytesIO()
     img.save(img_byte_arr, format='PNG')
     img_byte_arr = img_byte_arr.getvalue()
-    
+
     # Mock pytesseract for the test
     import pytesseract
     def mock_image_to_string(image, *args, **kwargs):
         return "mock ocr text"
-    
+
     original_ocr = pytesseract.image_to_string
     pytesseract.image_to_string = mock_image_to_string
-    
+
     try:
         files = {"file": ("test.png", img_byte_arr, "image/png")}
         ocr_response = client.post("/ocr", files=files)
         assert ocr_response.status_code == 200
         ocr_text = ocr_response.json().get("text", "")
         assert ocr_text == "mock ocr text"
-        
+
         # 3. Analyze extracted text
         payload_ocr = {
             "subject": "OCR Test",
@@ -134,11 +135,49 @@ def test_regression_bug_paste_and_ocr():
         }
         analyze_response = client.post("/analyze-manual", json=payload_ocr)
         assert analyze_response.status_code == 200
-        
+
         # 4. Count email records again
         emails_after_ocr, _, _ = get_db_counts()
-        
+
         # 5. Assert count is unchanged
         assert emails_after_ocr == emails_before
+    finally:
+        pytesseract.image_to_string = original_ocr
+
+def test_analyze_manual_bad_words():
+    payload = {
+        "subject": "Bad word test",
+        "body": "This contains the word offensiveword in it.",
+        "sender": "colleague@work.com"
+    }
+    response = client.post("/analyze-manual", json=payload)
+    assert response.status_code == 400
+    data = response.json()
+    assert data["blocked"] is True
+    assert data["reason"] == "BAD_WORD_DETECTED"
+    assert data["detected_count"] > 0
+
+def test_ocr_bad_words():
+    # create a dummy image
+    img = Image.new('RGB', (100, 30), color = (255, 255, 255))
+    img_byte_arr = io.BytesIO()
+    img.save(img_byte_arr, format='PNG')
+    img_byte_arr = img_byte_arr.getvalue()
+
+    # Mock pytesseract for the test
+    import pytesseract
+    def mock_image_to_string(image, *args, **kwargs):
+        return "This text contains offensiveword."
+
+    original_ocr = pytesseract.image_to_string
+    pytesseract.image_to_string = mock_image_to_string
+
+    try:
+        files = {"file": ("test.png", img_byte_arr, "image/png")}
+        ocr_response = client.post("/ocr", files=files)
+        assert ocr_response.status_code == 400
+        data = ocr_response.json()
+        assert data["blocked"] is True
+        assert data["reason"] == "BAD_WORD_DETECTED"
     finally:
         pytesseract.image_to_string = original_ocr

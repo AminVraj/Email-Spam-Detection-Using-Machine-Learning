@@ -23,6 +23,7 @@ def setup_test_db():
             pass
 
 client = TestClient(app)
+client.headers["Authorization"] = "Bearer mock_token_testuser"
 
 def test_health_endpoint():
     response = client.get("/health")

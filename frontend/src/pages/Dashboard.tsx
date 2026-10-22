@@ -1,13 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../services/api";
-import { 
-  BarChart, 
-  Mail, 
-  ShieldAlert, 
+import {
+  BarChart,
+  Mail,
+  ShieldAlert,
   ShieldCheck,
   RefreshCw,
   AlertTriangle,
-  CheckCircle2
+  CheckCircle2,
+  Tag
 } from "lucide-react";
 
 export function Dashboard() {
@@ -37,7 +38,7 @@ export function Dashboard() {
 
   if (statsError) {
     return (
-      <div className="bg-red-50 text-red-600 p-4 rounded-lg">
+      <div className="bg-red-50 dark:bg-red-900/30 text-red-600 p-4 rounded-lg">
         Failed to load statistics. Please ensure the backend is running.
       </div>
     );
@@ -47,16 +48,16 @@ export function Dashboard() {
     <div className="space-y-6">
       <div className="flex justify-between items-center">
         <h1 className="text-2xl font-bold">System Overview</h1>
-        
+
         <div className="flex items-center gap-4">
-          <div className="flex items-center gap-2 text-sm bg-white px-3 py-1.5 rounded-full shadow-sm border border-slate-200">
+          <div className="flex items-center gap-2 text-sm bg-white dark:bg-slate-800 px-3 py-1.5 rounded-full shadow-sm border border-slate-200 dark:border-slate-700">
             {authStatus?.authenticated ? (
               <><span className="w-2 h-2 rounded-full bg-green-500"></span> Gmail Connected</>
             ) : (
               <><span className="w-2 h-2 rounded-full bg-red-500"></span> Gmail Disconnected</>
             )}
           </div>
-          
+
           <button
             onClick={() => syncMutation.mutate()}
             disabled={syncMutation.isPending || !authStatus?.authenticated}
@@ -69,61 +70,66 @@ export function Dashboard() {
       </div>
 
       {syncMutation.isError && (
-        <div className="bg-red-50 text-red-600 p-4 rounded-lg flex items-center gap-3">
+        <div className="bg-red-50 dark:bg-red-900/30 text-red-600 p-4 rounded-lg flex items-center gap-3">
           <AlertTriangle size={20} />
           <span>Failed to sync Gmail. Please check your authentication status or backend logs.</span>
         </div>
       )}
 
       {syncMutation.isSuccess && (
-        <div className="bg-green-50 text-green-700 p-4 rounded-lg flex items-center gap-3">
+        <div className="bg-green-50 dark:bg-green-900/30 text-green-700 dark:text-green-400 p-4 rounded-lg flex items-center gap-3">
           <CheckCircle2 size={20} />
           <span>
-            Sync complete! Processed {syncMutation.data.messages_processed} emails 
+            Sync complete! Processed {syncMutation.data.messages_processed} emails
             ({syncMutation.data.new_spam} SPAM, {syncMutation.data.new_ham} HAM).
           </span>
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-        <StatCard 
-          title="Total Processed" 
-          value={stats?.total_predictions} 
-          icon={<Mail className="text-blue-500" size={24} />} 
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-5 gap-6">
+        <StatCard
+          title="Total Emails"
+          value={stats?.total_predictions}
+          icon={<Mail className="text-blue-500" size={24} />}
         />
-        <StatCard 
-          title="Detected Spam" 
-          value={stats?.spam_predictions} 
-          icon={<ShieldAlert className="text-red-500" size={24} />} 
+        <StatCard
+          title="Detected Spam"
+          value={stats?.spam_predictions}
+          icon={<ShieldAlert className="text-red-500" size={24} />}
         />
-        <StatCard 
-          title="Clean Emails (Ham)" 
-          value={stats?.ham_predictions} 
-          icon={<ShieldCheck className="text-green-500" size={24} />} 
+        <StatCard
+          title="Clean Emails (Ham)"
+          value={stats?.ham_predictions}
+          icon={<ShieldCheck className="text-green-500" size={24} />}
         />
-        <StatCard 
-          title="User Corrections" 
-          value={stats?.user_corrections} 
-          icon={<BarChart className="text-purple-500" size={24} />} 
+        <StatCard
+          title="Promotions"
+          value={stats?.promotions_count || 0}
+          icon={<Tag className="text-orange-500" size={24} />}
+        />
+        <StatCard
+          title="User Corrections"
+          value={stats?.user_corrections}
+          icon={<BarChart className="text-purple-500" size={24} />}
         />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mt-6">
-        <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
+        <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700">
           <h3 className="font-semibold text-lg mb-4">Model Information</h3>
           <div className="space-y-3">
-            <div className="flex justify-between py-2 border-b border-slate-100">
-              <span className="text-slate-500">Active Production Model</span>
-              <span className="font-medium bg-indigo-50 text-indigo-700 px-2 py-0.5 rounded text-sm">
+            <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-slate-500 dark:text-slate-400">Active Production Model</span>
+              <span className="font-medium bg-indigo-50 dark:bg-indigo-900/30 text-indigo-700 dark:text-indigo-300 px-2 py-0.5 rounded text-sm">
                 {stats?.model_version}
               </span>
             </div>
-            <div className="flex justify-between py-2 border-b border-slate-100">
-              <span className="text-slate-500">Observed False Positives</span>
+            <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-slate-500 dark:text-slate-400">Observed False Positives</span>
               <span className="font-medium text-red-600">{stats?.user_feedback_observed_outcomes.false_positives}</span>
             </div>
-            <div className="flex justify-between py-2 border-b border-slate-100">
-              <span className="text-slate-500">Observed False Negatives</span>
+            <div className="flex justify-between py-2 border-b border-slate-100 dark:border-slate-800">
+              <span className="text-slate-500 dark:text-slate-400">Observed False Negatives</span>
               <span className="font-medium text-red-600">{stats?.user_feedback_observed_outcomes.false_negatives}</span>
             </div>
           </div>
@@ -135,12 +141,12 @@ export function Dashboard() {
 
 function StatCard({ title, value, icon }: { title: string; value?: number; icon: React.ReactNode }) {
   return (
-    <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200 flex items-center gap-4">
-      <div className="bg-slate-50 p-3 rounded-lg">
+    <div className="bg-white dark:bg-slate-800 p-6 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 flex items-center gap-4">
+      <div className="bg-slate-50 dark:bg-slate-900 p-3 rounded-lg">
         {icon}
       </div>
       <div>
-        <p className="text-sm text-slate-500 font-medium">{title}</p>
+        <p className="text-sm text-slate-500 dark:text-slate-400 font-medium">{title}</p>
         <p className="text-2xl font-bold mt-1">{value !== undefined ? value : "-"}</p>
       </div>
     </div>

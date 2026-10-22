@@ -22,11 +22,11 @@ export function AdaptiveLearning() {
         </div>
         <div>
           <h1 className="text-2xl font-bold">Adaptive Learning</h1>
-          <p className="text-slate-500 text-sm">Automated feedback processing and candidate training</p>
+          <p className="text-slate-500 dark:text-slate-400 text-sm">Automated feedback processing and candidate training</p>
         </div>
       </div>
 
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-8">
+      <div className="bg-white dark:bg-slate-800 rounded-xl shadow-sm border border-slate-200 dark:border-slate-700 p-8">
         <h2 className="text-lg font-semibold mb-6">Training Readiness Status</h2>
         
         <div className="flex items-center justify-between mb-2">
@@ -35,7 +35,7 @@ export function AdaptiveLearning() {
           </span>
           <span className={clsx(
             "px-3 py-1 rounded-full text-sm font-bold flex items-center gap-2",
-            report.training_ready ? "bg-green-100 text-green-700" : "bg-amber-100 text-amber-700"
+            report.training_ready ? "bg-green-100 text-green-700 dark:text-green-400" : "bg-amber-100 text-amber-700"
           )}>
             {report.training_ready ? <CheckCircle2 size={16}/> : <AlertCircle size={16}/>}
             {report.training_ready ? "Ready for candidate training" : "Not Ready"}
@@ -52,27 +52,27 @@ export function AdaptiveLearning() {
           ></div>
         </div>
 
-        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 border-t border-slate-100">
+        <div className="grid grid-cols-2 md:grid-cols-4 gap-4 pt-6 border-t border-slate-100 dark:border-slate-800">
           <div>
-            <p className="text-xs text-slate-500 font-medium">Total Feedback</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Total Feedback</p>
             <p className="text-xl font-bold mt-1">{report.total_feedback}</p>
           </div>
           <div>
             <p className="text-xs text-green-600 font-medium">Valid / Usable</p>
-            <p className="text-xl font-bold mt-1 text-green-700">{report.valid_feedback}</p>
+            <p className="text-xl font-bold mt-1 text-green-700 dark:text-green-400">{report.valid_feedback}</p>
           </div>
           <div>
-            <p className="text-xs text-slate-500 font-medium">Duplicates Deduplicated</p>
+            <p className="text-xs text-slate-500 dark:text-slate-400 font-medium">Duplicates Deduplicated</p>
             <p className="text-xl font-bold mt-1">{report.duplicate_feedback}</p>
           </div>
           <div>
             <p className="text-xs text-red-600 font-medium">Conflicting / Rejected</p>
-            <p className="text-xl font-bold mt-1 text-red-700">{report.conflicting_feedback}</p>
+            <p className="text-xl font-bold mt-1 text-red-700 dark:text-red-400">{report.conflicting_feedback}</p>
           </div>
         </div>
       </div>
 
-      <div className="bg-slate-50 rounded-xl border border-slate-200 p-8">
+      <div className="bg-slate-50 dark:bg-slate-900 rounded-xl border border-slate-200 dark:border-slate-700 p-8">
         <h3 className="font-bold mb-6 text-center">Controlled Model Evolution Pipeline</h3>
         
         <div className="flex flex-col items-center max-w-sm mx-auto space-y-2">
@@ -106,10 +106,10 @@ function PipelineStep({ label, desc, highlight, final }: { label: string, desc: 
     <div className={clsx(
       "w-full p-3 rounded-lg border text-center transition-colors shadow-sm",
       final ? "bg-indigo-600 text-white border-indigo-700 font-bold" : 
-      highlight ? "bg-amber-100 border-amber-300 text-amber-900" : "bg-white border-slate-300 text-slate-800"
+      highlight ? "bg-amber-100 border-amber-300 text-amber-900" : "bg-white dark:bg-slate-800 border-slate-300 text-slate-800 dark:text-slate-100"
     )}>
       <div className="text-sm">{label}</div>
-      <div className={clsx("text-xs mt-1", final ? "text-indigo-200" : "text-slate-500")}>{desc}</div>
+      <div className={clsx("text-xs mt-1", final ? "text-indigo-200" : "text-slate-500 dark:text-slate-400")}>{desc}</div>
     </div>
   );
 }

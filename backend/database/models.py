@@ -9,7 +9,9 @@ class Email(Base):
     
     id = Column(Integer, primary_key=True, index=True)
     provider = Column(String, nullable=True) # e.g. "gmail", "api"
+    provider_category = Column(String, nullable=True, default="PRIMARY")
     provider_message_id = Column(String, nullable=True, index=True)
+    account_email = Column(String, nullable=True, index=True)
     sender = Column(String, nullable=True)
     subject = Column(String, nullable=True)
     body_hash = Column(String, nullable=False, index=True)

@@ -1,136 +1,202 @@
-# Email Spam Detection System
+# Email Sentinel AI — Architecture, Security & Operations Guide
 
-An adaptive NLP-based Email Spam Detection System built with Python, scikit-learn, and FastAPI, featuring controlled model evolution and governance.
+An adaptive NLP-based Email Spam Detection and Security Analysis System with real-time Gmail OAuth integration, atomic database persistence, account-isolated predictions, Promotions classification, and controlled model governance.
 
-## Current Architecture
-The project is structured into modular components:
-- **`backend/nlp`**: Core Natural Language Processing logic (text cleaning, feature extraction).
-- **`backend/ml`**: Machine learning model inference, feedback quality validation, and model governance.
-- **`backend/app`**: FastAPI endpoints serving predictions, feedback, training trigger, model comparison, promotion, and rollback.
-- **`training/`**: Adaptive dataset construction, leakproof data splitting, and model training pipelines.
-- **`tests/`**: Automated test suite for NLP pipelines, API endpoints, database operations, and Phase 5 adaptive learning features.
-- **`frontend/`**: React, TypeScript, and Tailwind CSS based admin dashboard for model monitoring and governance.
+---
 
-## NLP Pipeline
-The classifier does not use manually hardcoded spam rules, keyword lists, or sender blacklists/whitelists. Instead, it relies on a statistical/linguistic NLP pipeline:
-1. **Preprocessing**: Normalizes Unicode, URLs, emails, numbers, and currency symbols.
-2. **Feature Extraction (Word & Char TF-IDF)**: Extracts Word 1–3 n-grams and Character 2–5 n-grams to capture both linguistic semantics and spam obfuscation (e.g., `fr33`).
-3. **Classification**: Advanced Linear SVM model trained on labeled data, providing decision function scores.
+## 1. Project Architecture
 
-## Adaptive Learning Architecture (Phase 5)
-
-The system is designed for controlled, auditable, and leakproof model evolution based on validated user feedback.
+The repository consists of four cohesive subsystems:
 
 ```text
-Initial Base Dataset (spam.csv)
-      │
-      ▼
-Production Model v1 (models/spam_model_v1.joblib)
-      │
-      ▼
-Real Email Predictions -> User Feedback
-      │
-      ▼
-Feedback Quality Validation Layer
-      │
-      ▼
-Minimum Feedback Threshold Check (ADAPTIVE_MIN_FEEDBACK=50)
-      │
-      ▼
-Combined Training Dataset (Base + Validated Feedback)
-      │
-      ▼
-Candidate Model v2 (models/spam_model_v2.joblib) [status = candidate]
-      │
-      ▼
-Holdout Validation / Test Evaluation & v1 vs v2 Comparison
-      │
-      ▼
-Explicit Promotion (POST /models/v2/promote)
-      │
-      ▼
-Production v2 (status = production) ──> v1 Retained for Rollback (status = archived)
+Email-Sentinel-AI/
+├── backend/                  # FastAPI Application & ML Pipelines
+│   ├── app/main.py           # REST API endpoints, auth, and CORS
+│   ├── config.py             # Environment configuration & security constants
+│   ├── content/              # Bad words and content filtering
+│   ├── database/             # SQLAlchemy engine, models, and repository
+│   ├── email/                # Gmail IMAP sync provider and normalizers
+│   ├── ml/                   # LinearSVC classifier, governance, and feedback validator
+│   ├── nlp/                  # Word and Character TF-IDF feature extractors
+│   └── security/auth.py      # OAuth token verification & HMAC session signing
+├── frontend/                 # React + TypeScript + Vite Dashboard
+│   ├── src/pages/            # Dashboard, Inbox, Analyze, Analytics, Adaptive, Models
+│   ├── src/services/api.ts   # Authenticated API client (credentials: include)
+│   └── src/context/          # Theme and application context
+├── extension/                # Chrome Extension (Manifest V3)
+│   ├── src/auth/             # Google OAuth & launchWebAuthFlow account selection
+│   ├── src/background/       # Service worker with Gmail API analysis pipeline
+│   ├── src/popup/            # Extension popup UI
+│   └── src/services/         # Gmail API message fetcher and label extractor
+├── models/                   # Preserved production model artifacts (v1)
+├── training/                 # Leakproof dataset construction and candidate training
+└── tests/                    # Comprehensive regression and security test suites
 ```
 
-> **IMPORTANT**: The system does NOT automatically retrain or replace the production model after every email. Model evolution is strictly controlled, versioned, and requires explicit promotion after passing governance checks.
+---
 
-### Key Adaptive Features
+## 2. Environment & Version Requirements
 
-1. **Production Model v1 Protection**: `models/spam_model_v1.joblib` remains intact as a permanent rollback model and is never overwritten or directly modified.
-2. **Feedback Quality Validation**: Validates user feedback for training eligibility:
-   - Email exists and contains usable training text.
-   - User label is valid (`SPAM` or `HAM`).
-   - Linked to a valid prediction.
-   - Prevents duplicate feedback per email/prediction.
-   - Detects content label conflicts (marks for review).
-   - Prevents re-using feedback already used in previous training cycles.
-3. **Minimum Feedback Threshold**: Retraining triggers only after reaching a configurable minimum amount of new validated feedback (`ADAPTIVE_MIN_FEEDBACK`, default 50).
-4. **Data Leakage Prevention**: Prevents text overlap across train and test sets using clean text deduplication and stratified splits.
-5. **Factual Model Comparison**: Compares candidate model metrics against production on the same evaluation dataset.
-6. **Explicit Model Governance & Promotion**: Promotion requires passing checks (Spam Precision drop <= 0.02, Spam Recall drop <= 0.05, FPR <= 0.02, model loadability, and automated regression tests).
-7. **Safe Rollback**: Immediate rollback to any previous version (e.g., `v1`) via `POST /models/{version}/rollback` without retraining.
-8. **Observed Outcomes vs Holdout Metrics**: Clearly distinguishes offline holdout test metrics from real-world user-feedback-based observed outcomes (observed FPs, FNs, TPs, TNs).
+- **Python**: 3.10 to 3.13 (Verified on Python 3.13.5)
+- **Node.js**: 18.x or 20.x (LTS)
+- **OCR Engine (Optional for Image Analysis)**: Tesseract-OCR v5.x
 
-## API Endpoints
+---
 
-### 1. Core Endpoints
-- `GET /health`: Health status.
-- `GET /model/info`: Active production model details.
-- `POST /predict`: Classify email as SPAM or HAM.
-- `POST /ocr`: Extracts text from an uploaded screenshot via Tesseract OCR and normalizes it.
-- `POST /feedback`: Record user confirmation or correction (SPAM or HAM).
-- `GET /statistics`: Operational predictions, corrections, and user-feedback-based observed outcomes.
+## 3. Installation Instructions
 
-### 2. Adaptive Evolution Endpoints (Phase 5)
-- `GET /feedback/quality-report`: Quality metrics and training readiness (never exposes raw email text).
-- `POST /models/train-candidate`: Triggers adaptive candidate model training (status = `candidate`).
-- `GET /models`: Lists all registered model versions and statuses.
-- `GET /models/compare/{version}`: Side-by-side metric comparison between production and candidate version.
-- `POST /models/{version}/promote`: Explicitly promotes candidate model to production after governance checks.
-- `POST /models/{version}/rollback`: Rolls back active production model to specified version.
-
-## Testing
-Run the complete automated test suite (67 offline tests covering Phase 1–5):
+### Backend Setup
 ```bash
-pytest tests/ -v
+# Create and activate a virtual environment
+python -m venv .venv
+# Windows PowerShell
+.venv\Scripts\Activate.ps1
+# Linux/macOS
+source .venv/bin/activate
+
+# Install reconciled backend dependencies
+pip install -r requirements.txt
 ```
 
-## Phase 6 Frontend Dashboard
-
-The Phase 6 frontend dashboard is built with **React**, **TypeScript**, **Vite**, **Tailwind CSS**, and **React Query**.
-
-### Running the Application
-
-**1. Start the FastAPI Backend:**
+### Frontend Setup
 ```bash
-python -m uvicorn backend.app.main:app --reload
+cd frontend
+npm install
+cd ..
 ```
 
-**2. Start the Frontend Dashboard:**
+### Chrome Extension Setup
+```bash
+cd extension
+npm install
+npm run build
+cd ..
+```
+
+---
+
+## 4. Environment Variables Setup
+
+Create a `.env` file in the root directory (never commit `.env` to Git):
+
+```ini
+# Application Secrets
+SESSION_SECRET_KEY=change-this-to-a-secure-random-32-byte-hex-key
+ADMIN_API_KEY=change-this-to-a-secure-admin-api-key
+ADMIN_EMAILS=admin@email-sentinel.local
+
+# Google OAuth Configuration
+GOOGLE_CLIENT_ID=1044023892905-910jptpfgub2ag6am67ocpgukhcnrgd1.apps.googleusercontent.com
+
+# CORS Configuration (Comma-separated)
+CORS_ORIGINS=http://localhost:5173,http://127.0.0.1:5173
+
+# Database URL
+DATABASE_URL=sqlite:///./spam_detection.db
+
+# Optional: Tesseract executable path if not in system PATH
+# TESSERACT_CMD=C:\Program Files\Tesseract-OCR\tesseract.exe
+
+# Optional: Server-side IMAP credentials (single-account fallback)
+# GMAIL_EMAIL=your-service-account@gmail.com
+# GMAIL_APP_PASSWORD=your-app-password
+```
+
+---
+
+## 5. Running the Application
+
+### 1. Start the FastAPI Backend
+```bash
+uvicorn backend.app.main:app --reload --host 127.0.0.1 --port 8000
+```
+Backend health check is available at `http://localhost:8000/health`.
+
+### 2. Start the Frontend Dashboard
 ```bash
 cd frontend
 npm run dev
 ```
+Dashboard opens at `http://localhost:5173`.
 
-### Frontend Architecture & Pages
-- **Dashboard**: High-level overview of processed emails, spam/ham detection counts, and Gmail authentication status.
-- **Inbox**: Displays processed emails retrieved from the backend, featuring SPAM/HAM badges and model version tags.
-- **Analyze Email**: Manual analysis workspace allowing users to paste suspicious text or upload an email screenshot (OCR) for evaluation against the active production model. Extracted text can be reviewed before triggering the classifier.
-- **Analytics**: Visualizes spam distribution and user-observed feedback outcomes.
-- **Adaptive Learning**: Monitors the feedback pipeline, showing the current count of validated feedback versus the required threshold for training.
-- **Model Management (Admin)**: Allows administrators to trigger candidate model training, run governance evaluations against the production model, and explicitly promote or rollback models.
+### 3. Load the Chrome Extension
+1. Open Google Chrome and navigate to `chrome://extensions/`.
+2. Toggle **Developer mode** (top right).
+3. Click **Load unpacked** and select the `extension/dist` directory.
 
-### Known Limitations
-- The current evaluation dataset is SMS-style rather than a representative real-world email corpus.
-- The LinearSVC decision score is a raw confidence margin, not a calibrated probability.
-- User feedback is treated as validated training feedback, not automatically assumed ground truth.
-- Candidate models are not automatically promoted; they require explicit admin approval via the governance UI.
-- Gmail sync uses the existing authentication architecture; backend authorization should be strengthened before production deployment.
+---
 
-## Dataset
-The current evaluation/training dataset is an SMS spam benchmark dataset (`Datasets/spam.csv`). Dataset source and redistribution terms should be verified according to the original dataset provider before redistribution.
+## 6. Security & Account Isolation Architecture
 
-## Privacy & Security
-- Full email text is never exposed via API responses, statistics, model metadata, or promotion reports.
-- Generated training datasets containing email content remain local and ignored by Git (`.gitignore`).
-- The frontend `.env` file does not contain application secrets.
+1. **Server-Side Token Verification**: The backend validates Google access tokens against `https://oauth2.googleapis.com/tokeninfo`, verifying token expiration, audience, and extracting the verified email.
+2. **Account Scoping**: Client-provided `account_email` parameters are never blindly trusted. Every email insert, prediction, and statistics lookup is strictly bound to the server-verified account identity.
+3. **Cross-Account Protection**:
+   - User A cannot view User B's emails.
+   - User A cannot view User B's email details.
+   - Cross-account feedback submissions return `HTTP 403 Forbidden`.
+   - Statistics queries are strictly scoped to the requesting user's records.
+4. **Administrative Protection**:
+   - Retraining (`POST /models/train-candidate`), model promotion (`POST /models/{version}/promote`), rollback (`POST /models/{version}/rollback`), and IMAP sync (`POST /gmail/sync`) require administrative privileges (`require_admin`).
+5. **CORS Restrictions**: Wildcard origins combined with credentials have been removed. Only explicit frontend origins (`http://localhost:5173`) and Chrome Extension origins (`chrome-extension://...`) are permitted.
+
+---
+
+## 7. Database Integrity & Atomic Persistence
+
+- **Atomic Writes**: `Repository.record_email_and_prediction` creates both the `Email` and `Prediction` record within a single database transaction using `session.flush()` and a single `session.commit()`. If prediction insertion fails, the entire transaction is rolled back, preventing orphaned records.
+- **Deduplication**: Deduplication is scoped to `(provider, provider_message_id, account_email)`. Repeated analysis reuses existing records without duplicate rows.
+- **Database Backup**: Always backup `spam_detection.db` before performing schema modifications:
+  ```bash
+  Copy-Item spam_detection.db spam_detection.db.bak
+  ```
+
+---
+
+## 8. Promotions Category Extraction
+
+- The Chrome extension extracts Gmail category labels (`labelIds` from Gmail API message responses).
+- Labels are mapped to categories:
+  - `CATEGORY_PROMOTIONS` → `PROMOTIONS`
+  - `CATEGORY_SOCIAL` → `SOCIAL`
+  - `CATEGORY_UPDATES` → `UPDATES`
+  - `CATEGORY_FORUMS` → `FORUMS`
+  - Default → `PRIMARY`
+- **Display Precedence Policy**: In the Inbox UI, an email in `PROMOTIONS` displays the `PROMOTION` badge. The underlying ML prediction (`SPAM` or `HAM`) and decision score remain preserved and visible in the email detail view.
+
+---
+
+## 9. Google OAuth & Account Switching Configuration
+
+### Google Cloud Console Requirements
+To use explicit account selection with `chrome.identity.launchWebAuthFlow`:
+1. Navigate to [Google Cloud Console](https://console.cloud.google.com/) -> **APIs & Services** -> **Credentials**.
+2. Under OAuth 2.0 Client IDs, open your client ID.
+3. Under **Authorized redirect URIs**, add your extension redirect URI:
+   ```text
+   https://<your-extension-id>.chromiumapp.org/
+   ```
+   *(Find `<your-extension-id>` on `chrome://extensions` after loading the unpacked extension).*
+
+### Limitations of Single-Credential IMAP
+The backend `/gmail/sync` endpoint uses a single set of environment credentials (`GMAIL_EMAIL` and `GMAIL_APP_PASSWORD`). Because IMAP cannot isolate multiple user accounts securely, it is restricted to administrative users. End-users must analyze their mail via the Chrome Extension OAuth flow.
+
+---
+
+## 10. Automated Test Suites
+
+Run the complete test suite:
+```bash
+# Run all Python backend tests
+pytest tests/ -v
+
+# Run extension unit and authentication tests
+cd extension
+npm run build
+node test-auth.js
+cd ..
+
+# Run frontend build validation
+cd frontend
+npm run build
+cd ..
+```
